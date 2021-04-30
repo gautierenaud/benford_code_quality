@@ -1,5 +1,9 @@
 import argparse
+import cProfile
 import math
+import os
+import sys
+from multiprocessing import Pool
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -9,7 +13,8 @@ from pygount import ProjectSummary, SourceAnalysis, analysis
 
 parser = argparse.ArgumentParser()
 parser.add_argument('scan_path', type=str)
-parser.add_argument('-o', '--out', required=False, help='output file name', type=str)
+parser.add_argument('-o', '--out', required=False,
+                    help='output file name', type=str)
 args = parser.parse_args()
 scan_path = args.scan_path
 output_file = args.out
@@ -42,26 +47,31 @@ def first_digit(num):
         return None
 
 
-source_paths = list(Path(scan_path).rglob('*'))
-
-df = pd.DataFrame()
-project_summary = ProjectSummary()
-raw_analysis = []
-for source_path in source_paths:
+def analyse_file(source_path):
     if not source_path.is_file():
-        continue
+        return
 
     source_analysis = SourceAnalysis.from_file(source_path, scan_path)
 
     if not source_analysis.state == analysis.SourceState.analyzed:
-        continue
+        return
 
-    project_summary.add(source_analysis)
-    raw_analysis.append(source_analysis)
+    return source_analysis
 
-df = pd.DataFrame.from_records([analysis.to_dict()
-                               for analysis in raw_analysis])
 
+def scan_code(scan_path):
+    source_paths = list((Path(scan_path)).rglob('*'))
+
+    with Pool(10) as p:
+        raw_analysis = list(filter(None, p.map(analyse_file, source_paths)))
+
+    df = pd.DataFrame.from_records([analysis.to_dict()
+                                    for analysis in raw_analysis])
+
+    return df
+
+
+df = scan_code(scan_path)
 
 # get first digit for different columns
 df['code_digit'] = df['code'].map(first_digit)
