@@ -9,8 +9,10 @@ from pygount import ProjectSummary, SourceAnalysis, analysis
 
 parser = argparse.ArgumentParser()
 parser.add_argument('scan_path', type=str)
+parser.add_argument('-o', '--out', required=False, help='output file name', type=str)
 args = parser.parse_args()
 scan_path = args.scan_path
+output_file = args.out
 
 # monkey patching analysis result to be able to convert it to dataframe
 
@@ -105,3 +107,6 @@ axs[1, 1].set_title('string')
 plt.suptitle(scan_path)
 
 plt.show()
+
+if output_file:
+    fig.savefig(output_file)
