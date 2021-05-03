@@ -19,8 +19,6 @@ args = parser.parse_args()
 scan_path = args.scan_path
 output_file = args.out
 
-# monkey patching analysis result to be able to convert it to dataframe
-
 
 def to_dict(self):
     return {
@@ -33,6 +31,7 @@ def to_dict(self):
     }
 
 
+# monkey patching analysis result to be able to convert it to dataframe
 SourceAnalysis.to_dict = to_dict
 
 
@@ -91,32 +90,47 @@ def normalized_count(pandas_count):
     return counts
 
 
-# plot the different occurences
-fig, axs = plt.subplots(2, 2, constrained_layout=True)
+def print_figures(dataframe, language, output_file=None):
+    # plot the different occurences
+    fig, axs = plt.subplots(2, 2, constrained_layout=True)
 
-code_count = normalized_count(df.groupby(['code_digit'])['code'].count())
-axs[0, 0].bar(labels, code_count)
-axs[0, 0].plot(benford_base * sum(code_count), color='red')
-axs[0, 0].set_title('code')
+    code_count = normalized_count(
+        dataframe.groupby(['code_digit'])['code'].count())
+    axs[0, 0].bar(labels, code_count)
+    axs[0, 0].plot(benford_base * sum(code_count), color='red')
+    axs[0, 0].set_title('code')
 
-doc_count = normalized_count(df.groupby(['doc_digit'])['doc'].count())
-axs[1, 0].bar(labels, doc_count)
-axs[1, 0].plot(benford_base * sum(doc_count), color='red')
-axs[1, 0].set_title('doc')
+    doc_count = normalized_count(
+        dataframe.groupby(['doc_digit'])['doc'].count())
+    axs[1, 0].bar(labels, doc_count)
+    axs[1, 0].plot(benford_base * sum(doc_count), color='red')
+    axs[1, 0].set_title('doc')
 
-empty_count = normalized_count(df.groupby(['empty_digit'])['empty'].count())
-axs[0, 1].bar(labels, empty_count)
-axs[0, 1].plot(benford_base * sum(empty_count), color='red')
-axs[0, 1].set_title('empty')
+    empty_count = normalized_count(
+        dataframe.groupby(['empty_digit'])['empty'].count())
+    axs[0, 1].bar(labels, empty_count)
+    axs[0, 1].plot(benford_base * sum(empty_count), color='red')
+    axs[0, 1].set_title('empty')
 
-string_count = normalized_count(df.groupby(['string_digit'])['string'].count())
-axs[1, 1].bar(labels, string_count)
-axs[1, 1].plot(benford_base * sum(string_count), color='red')
-axs[1, 1].set_title('string')
+    string_count = normalized_count(
+        dataframe.groupby(['string_digit'])['string'].count())
+    axs[1, 1].bar(labels, string_count)
+    axs[1, 1].plot(benford_base * sum(string_count), color='red')
+    axs[1, 1].set_title('string')
 
-plt.suptitle(scan_path)
+    plt.suptitle(f'{scan_path}: {language}')
 
-plt.show()
+    plt.show()
 
-if output_file:
-    fig.savefig(output_file)
+    if output_file:
+        fig.savefig(output_file)
+
+
+for language in df.language.unique():
+    language_df = df[df.language == language]
+
+    language_output_file = None
+    if output_file:
+        language_output_file = f'{language}_{output_file}'
+
+    print_figures(language_df, language, language_output_file)
