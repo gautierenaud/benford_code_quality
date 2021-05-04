@@ -6,6 +6,7 @@ import sys
 from multiprocessing import Pool
 from pathlib import Path
 
+import lizard
 import matplotlib.pyplot as plt
 # import mathplotlib.pyplot as plt
 import pandas as pd
@@ -20,19 +21,29 @@ scan_path = args.scan_path
 output_file = args.out
 
 
-def to_dict(self):
-    return {
-        'code': self.code,
-        'doc': self.documentation,
-        'empty': self.empty,
-        'string': self.string,
-        'language': self.language,
-        'path': self.path
-    }
+class AnalysedFile():
+    def __init__(self, source: SourceAnalysis):
+        self.code = source.code
+        self.documentation = source.documentation
+        self.empty = source.empty
+        self.string = source.string
+        self.language = source.language
+        self.path = source.path
+        self.avg_complexity = 0
 
+    def add_avg_complexity(self, avg_complexity):
+        self.avg_complexity = avg_complexity
 
-# monkey patching analysis result to be able to convert it to dataframe
-SourceAnalysis.to_dict = to_dict
+    def to_dict(self):
+        return {
+            'code': self.code,
+            'doc': self.documentation,
+            'empty': self.empty,
+            'string': self.string,
+            'language': self.language,
+            'path': self.path,
+            'avg_ccn': self.avg_complexity
+        }
 
 
 def first_digit(num):
@@ -46,7 +57,7 @@ def first_digit(num):
         return None
 
 
-def analyse_file(source_path):
+def analyse_file(source_path: Path):
     if not source_path.is_file():
         return
 
@@ -55,7 +66,12 @@ def analyse_file(source_path):
     if not source_analysis.state == analysis.SourceState.analyzed:
         return
 
-    return source_analysis
+    i = lizard.analyze_file(str(source_path))
+
+    result = AnalysedFile(source_analysis)
+    result.add_avg_complexity(i.average_CCN)
+
+    return result
 
 
 def scan_code(scan_path):
@@ -77,6 +93,7 @@ df['code_digit'] = df['code'].map(first_digit)
 df['doc_digit'] = df['doc'].map(first_digit)
 df['empty_digit'] = df['empty'].map(first_digit)
 df['string_digit'] = df['string'].map(first_digit)
+df['avg_ccn_digit'] = df['avg_ccn'].map(first_digit)
 
 # define useful parts to draw graphs
 benford_base = pd.DataFrame([math.log10(1 + 1 / d) for d in range(1, 10)])
@@ -92,7 +109,7 @@ def normalized_count(pandas_count):
 
 def print_figures(dataframe, language, output_file=None):
     # plot the different occurences
-    fig, axs = plt.subplots(2, 2, constrained_layout=True)
+    fig, axs = plt.subplots(3, 2, constrained_layout=True)
 
     code_count = normalized_count(
         dataframe.groupby(['code_digit'])['code'].count())
@@ -117,6 +134,12 @@ def print_figures(dataframe, language, output_file=None):
     axs[1, 1].bar(labels, string_count)
     axs[1, 1].plot(benford_base * sum(string_count), color='red')
     axs[1, 1].set_title('string')
+
+    complexity_count = normalized_count(
+        dataframe.groupby(['avg_ccn_digit'])['avg_ccn'].count())
+    axs[2, 0].bar(labels, complexity_count)
+    axs[2, 0].plot(benford_base * sum(complexity_count), color='red')
+    axs[2, 0].set_title('avg_ccn')
 
     plt.suptitle(f'{scan_path}: {language}')
 

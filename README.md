@@ -61,11 +61,29 @@ It is not as neat as with python but there are less files, and it is probably fi
 
 ### SmartHouse v2
 
-![Scan of SmartHouse](docs/smarthouse_v2_java.png)
+![Scan of SmartHouse v2](docs/smarthouse_v2_java.png)
 
 The discrepancies in documentation might be even more obvious :p
 
+## Adding cyclomatic complexity
+
 Next Step might be to focus on programming language, and launch the tool on different repos (with `good` or `bad` reputation). Or try to count UTs/complexity.
+
+I will try cyclomatic complexity first, because it seems easier to measure it for different languages. I used [lizard](https://github.com/terryyin/lizard) for this. This library seems to be a bit "left over" on pypi, but the repo shows signs of activity. It gives us several metrics, and among them average cyclomatic complexity.
+
+### Numpy v3
+
+![Scan of numpy v3 python](docs/numpy_v3_python.png)
+
+Interestingly, the average code complexity seems to follows a logarithmic curve, but steeper than Benford's. The 1s stand out more than the rest (let's hope the complexity is near 1, not 10 or 100 ;) )
+
+The same scan on the C files shows the same pattern.
+
+### SmartHouse v3
+
+![Scan of SmartHouse v3](docs/smarthouse_v3_java.png)
+
+Even though there were differences with Numpy in the previous metrics, I feel like both project have very similar repartition for cyclomatic complexity.
 
 # Reminders
 
