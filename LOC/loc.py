@@ -15,10 +15,18 @@ from pygount import ProjectSummary, SourceAnalysis, analysis
 parser = argparse.ArgumentParser()
 parser.add_argument('scan_path', type=str)
 parser.add_argument('-o', '--out', required=False,
-                    help='output file name', type=str)
+                    help='output file name suffix', type=str)
+parser.add_argument('-q', '--quiet', required=False,
+                    help='does not display images', action='store_true')
+parser.add_argument('-l', '--languages', required=False,
+                    help='languages to analyse', nargs='*')
+
+
 args = parser.parse_args()
 scan_path = args.scan_path
 output_file = args.out
+quiet = args.quiet
+filtered_languages = args.languages
 
 
 class AnalysedFile():
@@ -30,9 +38,11 @@ class AnalysedFile():
         self.language = source.language
         self.path = source.path
         self.avg_complexity = 0
+        self.sum_complexity = 0
 
-    def add_avg_complexity(self, avg_complexity):
+    def add_complexity(self, avg_complexity, sum_complexity):
         self.avg_complexity = avg_complexity
+        self.sum_complexity = sum_complexity
 
     def to_dict(self):
         return {
@@ -42,7 +52,8 @@ class AnalysedFile():
             'string': self.string,
             'language': self.language,
             'path': self.path,
-            'avg_ccn': self.avg_complexity
+            'avg_ccn': self.avg_complexity,
+            'sum_ccn': self.sum_complexity
         }
 
 
@@ -69,7 +80,7 @@ def analyse_file(source_path: Path):
     i = lizard.analyze_file(str(source_path))
 
     result = AnalysedFile(source_analysis)
-    result.add_avg_complexity(i.average_CCN)
+    result.add_complexity(i.average_CCN, i.CCN)
 
     return result
 
@@ -94,6 +105,7 @@ df['doc_digit'] = df['doc'].map(first_digit)
 df['empty_digit'] = df['empty'].map(first_digit)
 df['string_digit'] = df['string'].map(first_digit)
 df['avg_ccn_digit'] = df['avg_ccn'].map(first_digit)
+df['sum_ccn_digit'] = df['sum_ccn'].map(first_digit)
 
 # define useful parts to draw graphs
 benford_base = pd.DataFrame([math.log10(1 + 1 / d) for d in range(1, 10)])
@@ -141,15 +153,29 @@ def print_figures(dataframe, language, output_file=None):
     axs[2, 0].plot(benford_base * sum(complexity_count), color='red')
     axs[2, 0].set_title('avg_ccn')
 
+    sum_complexity_count = normalized_count(
+        dataframe.groupby(['sum_ccn_digit'])['sum_ccn'].count())
+    axs[2, 1].bar(labels, sum_complexity_count)
+    axs[2, 1].plot(benford_base * sum(sum_complexity_count), color='red')
+    axs[2, 1].set_title('sum_ccn')
+
     plt.suptitle(f'{scan_path}: {language}')
 
-    plt.show()
+    if not quiet:
+        plt.show()
 
     if output_file:
         fig.savefig(output_file)
 
+languages = df.language.unique()
+print(f'Languages in project: {languages}')
 
 for language in df.language.unique():
+    if filtered_languages and language not in filtered_languages:
+        continue
+    else:
+        print(f'Analysing {language}...')
+
     language_df = df[df.language == language]
 
     language_output_file = None

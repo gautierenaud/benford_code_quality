@@ -85,6 +85,24 @@ The same scan on the C files shows the same pattern.
 
 Even though there were differences with Numpy in the previous metrics, I feel like both project have very similar repartition for cyclomatic complexity.
 
+## Cyclomatic complexity (sum)
+
+Now I will just count the cyclomatic complexity of a file (so the sum of the cyclomatic complexity that one can find in).
+
+### Numpy v4
+
+![Scan of numpy v4 python](docs/numpy_v4_python.png)
+
+Seems far better then average, I should have started with this one !
+
+### SmartHouse v4
+
+![Scan of SmartHouse v4](docs/smarthouse_v4_java.png)
+
+Seems to follow Benford's law more closely.
+
+I think I will keep this one and remove the average complexity.
+
 # Reminders
 
 Python venv:
